@@ -1,0 +1,9 @@
+<svg viewBox="0 0 140 72" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(70, 36)">
+    <g fill="#0a0a0e">
+      <polygon points="-70,-32 -46,-32 -18,0 -46,32 -70,32 -42,0"/>
+      <polygon points="-35,-32 -11,-32 17,0 -11,32 -35,32 -7,0"/>
+      <polygon points="0,-32 24,-32 52,0 24,32 0,32 28,0"/>
+    </g>
+  </g>
+</svg>

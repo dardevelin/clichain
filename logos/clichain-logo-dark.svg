@@ -1,0 +1,11 @@
+<svg viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(140, 70)">
+    <g fill="#e4e4ea">
+      <polygon points="-80,-36 -52,-36 -20,0 -52,36 -80,36 -48,0"/>
+      <polygon points="-40,-36 -12,-36 20,0 -12,36 -40,36 -8,0"/>
+      <polygon points="0,-36 28,-36 60,0 28,36 0,36 32,0"/>
+    </g>
+    <text text-anchor="middle" y="80" font-size="24" font-weight="400" letter-spacing="10" fill="#e4e4ea" font-family="'SF Mono','Fira Code','JetBrains Mono','Courier New',monospace">CLICHAIN</text>
+    <text text-anchor="middle" y="102" font-size="9" font-weight="300" letter-spacing="4" fill="#4a4a56" font-family="'SF Mono','Fira Code','JetBrains Mono','Courier New',monospace">FLUENT CLI PIPELINES</text>
+  </g>
+</svg>
