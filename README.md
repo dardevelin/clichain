@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="logos/clichain-horizontal-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="logos/clichain-horizontal-light.svg">
-    <img alt="clichain" src="logos/clichain-horizontal-dark.svg" width="340">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dardevelin/clichain/main/logos/clichain-horizontal-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/dardevelin/clichain/main/logos/clichain-horizontal-light.svg">
+    <img alt="clichain" src="https://raw.githubusercontent.com/dardevelin/clichain/main/logos/clichain-horizontal-dark.svg" width="340">
   </picture>
 </p>
 

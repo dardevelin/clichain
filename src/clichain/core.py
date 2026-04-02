@@ -490,8 +490,19 @@ def _explain_exit(code: int) -> str:
 
 
 _output: IO[str] | Callable[[str], None] | None = sys.stderr
-_version: str = "0.1.1"
 _git_hash: str = ""
+
+
+def _get_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("cmdchain")
+    except Exception:
+        return "0.0.0"
+
+
+_version: str = _get_version()
 
 
 def _detect_git_hash() -> str:
