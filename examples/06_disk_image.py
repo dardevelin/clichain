@@ -6,7 +6,11 @@ Compare with raw subprocess (35 lines of manual pipe wiring)
 vs clichain (7 lines).
 """
 
-from clichain import tool
+import sys
+
+from clichain import set_output, tool
+
+set_output(sys.stdout)
 
 pv = tool("pv")
 tee = tool("tee")

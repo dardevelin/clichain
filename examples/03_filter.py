@@ -1,17 +1,14 @@
 """Filter pipeline output with Python logic."""
 
-from clichain import tool
+from clichain import set_output, tool
+
+set_output(None)
 
 ls = tool("ls")
 wc = tool("wc")
 
 # Count only .py files in the current directory
-result = (
-    ls(".")
-    .filter(lambda f: f.endswith(".py"))
-    .pipe(wc("-l"))
-    .run()
-)
+result = ls(".").filter(lambda f: f.endswith(".py")).pipe(wc("-l")).run()
 
 print(f"Python files: {result.stdout.strip()}")
 

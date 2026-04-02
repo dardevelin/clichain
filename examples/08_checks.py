@@ -1,6 +1,8 @@
 """Preflight checks: versions, env vars, files."""
 
-from clichain import env, file_exists, tool
+from clichain import env, file_exists, set_output, tool
+
+set_output(None)  # handle output ourselves
 
 # Version constraints on tools
 bash = tool("bash", version=">=3.0")
@@ -8,11 +10,7 @@ sort = tool("sort")
 grep = tool("grep")
 
 # Check tools without running
-pipeline = (
-    bash("-c", "echo hello")
-    .pipe(sort())
-    .pipe(grep("hello"))
-)
+pipeline = bash("-c", "echo hello").pipe(sort()).pipe(grep("hello"))
 
 print("--- pipeline.check() ---")
 checks = pipeline.check()
@@ -32,6 +30,9 @@ result = echo("test").run(
     ]
 )
 
-print(f"\n--- result ---")
+print("\n--- result ---")
 print(f"ok: {result.ok}")
 print(f"checks: {len(result.checks)}")
+for c in result.checks:
+    status = "ok" if c.ok else ("warn" if c.on_fail == "warn" else "FAIL")
+    print(f"  [{status}] {c.name}: {c.found}")

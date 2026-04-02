@@ -3,7 +3,11 @@
 Demonstrates: capture, filter, each with workers.
 """
 
-from clichain import tool
+import sys
+
+from clichain import set_output, tool
+
+set_output(sys.stdout)
 
 VIDEO_EXTS = (".mkv", ".mp4", ".avi", ".webm")
 

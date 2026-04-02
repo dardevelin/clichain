@@ -1,6 +1,10 @@
 """Throughput monitoring with meter()."""
 
-from clichain import tool
+import sys
+
+from clichain import set_output, tool
+
+set_output(sys.stdout)
 
 seq = tool("seq")
 sort = tool("sort")
@@ -25,9 +29,7 @@ stats_log: list = []
 result = (
     echo("a\nb\nc\nd\ne")
     .meter(
-        to=lambda stats: stats_log.append(
-            {"bytes": stats.bytes, "lines": stats.lines}
-        ),
+        to=lambda stats: stats_log.append({"bytes": stats.bytes, "lines": stats.lines}),
         interval=0,  # report on every line
     )
     .run(validate=False)

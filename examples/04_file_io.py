@@ -1,9 +1,11 @@
 """File input and output: from_file, redirect, feed."""
 
-import tempfile
 import os
+import tempfile
 
-from clichain import tool
+from clichain import set_output, tool
+
+set_output(None)
 
 sort = tool("sort")
 uniq = tool("uniq")

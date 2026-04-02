@@ -1,6 +1,10 @@
 """Execution reports, SBOM, and error diagnostics."""
 
-from clichain import tool
+import sys
+
+from clichain import set_output, tool
+
+set_output(sys.stdout)
 
 sort = tool("sort")
 uniq = tool("uniq")
@@ -31,12 +35,7 @@ print("\n--- explain ---")
 result.explain()
 
 # --- Describe (no execution) ---
-pipeline = (
-    sort()
-    .from_file("/tmp/data.txt")
-    .pipe(uniq("-c"))
-    .redirect(stdout="/tmp/output.txt")
-)
+pipeline = sort().from_file("/tmp/data.txt").pipe(uniq("-c")).redirect(stdout="/tmp/output.txt")
 
 print("\n--- describe ---")
 pipeline.describe()
