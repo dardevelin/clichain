@@ -246,7 +246,7 @@ result = (
 # result.stdout.strip() == "2"  -- data passed through unchanged
 ```
 
-With a label (prints to `clichain.output`):
+With a label (prints to the configured output destination):
 
 ```python
 .peek(label="after filter")
@@ -288,6 +288,10 @@ sort().from_file("large.bin", block_size=65536).run()
 **Write to file:**
 
 ```python
+echo = tool("echo")
+sort = tool("sort")
+make = tool("make")
+
 # bash: sort < input.txt > output.txt
 sort().from_file("input.txt").redirect(stdout="output.txt").run()
 
@@ -295,7 +299,7 @@ sort().from_file("input.txt").redirect(stdout="output.txt").run()
 echo("new line").redirect(stdout="log.txt", append=True).run()
 
 # Separate stderr:
-cmd("make").redirect(stdout="build.log", stderr="errors.log").run()
+make().redirect(stdout="build.log", stderr="errors.log").run()
 ```
 
 ### Merge stderr
@@ -314,6 +318,7 @@ Explicit buffering boundary. Forces all data to be collected in memory before
 the next step proceeds:
 
 ```python
+echo = tool("echo")
 result = echo("hello").collect().run()
 ```
 
@@ -358,6 +363,10 @@ Count bytes and lines flowing through the pipeline. Streams line-by-line,
 reports throughput periodically:
 
 ```python
+seq  = tool("seq")
+sort = tool("sort")
+wc   = tool("wc")
+
 result = (
     seq("1000000")
     .meter(label="raw")
@@ -371,12 +380,12 @@ result = (
 Parameters:
 - `label` -- prefix for the output
 - `interval` -- seconds between reports (default `1.0`, use `0` for every line)
-- `to` -- custom destination: `None` (uses `clichain.output`), a callable receiving `MeterStats`, or a file-like object
+- `to` -- custom destination: `None` (uses configured output), a callable receiving `MeterStats`, or a file-like object
 
 ```python
-# Custom callback
+# Custom callback -- collect stats programmatically
 stats_log = []
-.meter(to=lambda stats: stats_log.append(stats), interval=0)
+echo("a\nb\nc").meter(to=lambda stats: stats_log.append(stats), interval=0).run()
 
 # MeterStats fields:
 #   stats.label          str
