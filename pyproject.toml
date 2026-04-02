@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "clichain"
+name = "cmdchain"
 version = "0.1.0"
 description = "Fluent CLI tool chaining for Python"
 requires-python = ">=3.10"

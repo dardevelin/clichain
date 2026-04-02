@@ -65,7 +65,7 @@ clichain gives you the same pipe-based execution model with:
 ## Install
 
 ```bash
-pip install clichain
+pip install cmdchain
 ```
 
 clichain has zero runtime dependencies. Python 3.10+ only.
@@ -73,7 +73,7 @@ clichain has zero runtime dependencies. Python 3.10+ only.
 For compiling scripts to standalone binaries:
 
 ```bash
-pip install clichain[compile]
+pip install cmdchain[compile]
 ```
 
 ## Development setup
@@ -105,7 +105,7 @@ python -m pytest tests/         # unit tests (62 tests)
 Compile end-to-end tests require pyinstaller and are skipped by default:
 
 ```bash
-pip install clichain[compile]
+pip install cmdchain[compile]
 python -m pytest tests/test_compile.py   # compile + run binary tests
 ```
 
@@ -717,7 +717,7 @@ Note: `clichain check` executes the script to discover tools. Only run on truste
 
 ### compile
 
-Bundle a clichain script to a standalone binary. Requires `pip install clichain[compile]`.
+Bundle a clichain script to a standalone binary. Requires `pip install cmdchain[compile]`.
 
 ```bash
 clichain compile my_pipeline.py -o my_pipeline

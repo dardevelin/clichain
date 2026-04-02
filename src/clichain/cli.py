@@ -88,7 +88,7 @@ def cmd_compile(args: argparse.Namespace) -> int:
 
     if importlib.util.find_spec("PyInstaller") is None:
         print(
-            "error: pyinstaller not installed\n  install with: pip install clichain[compile]",
+            "error: pyinstaller not installed\n  install with: pip install cmdchain[compile]",
             file=sys.stderr,
         )
         return 1
