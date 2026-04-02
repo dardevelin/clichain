@@ -7,7 +7,8 @@
 </p>
 
 <p align="center">
-  Fluent CLI tool chaining for Python.
+  Fluent CLI tool chaining for Python.<br>
+  <code>pip install cmdchain</code>
 </p>
 
 <p align="center">
@@ -25,8 +26,12 @@
 clichain replaces bash scripts with typed, inspectable, lazy-evaluated pipelines
 of CLI commands connected by real kernel pipes. Zero runtime dependencies. Python 3.10+.
 
+```bash
+pip install cmdchain
+```
+
 ```python
-from clichain import tool
+from clichain import tool  # module name is clichain
 
 echo = tool("echo")
 grep = tool("grep")
