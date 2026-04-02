@@ -12,6 +12,13 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/dardevelin/clichain/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dardevelin/clichain/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/cmdchain/"><img alt="PyPI" src="https://img.shields.io/pypi/v/cmdchain"></a>
+  <a href="https://pypi.org/project/cmdchain/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/cmdchain"></a>
+  <a href="LICENSE-MIT"><img alt="License" src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue"></a>
+</p>
+
+<p align="center">
   <a href="#install">Install</a> &middot;
   <a href="#quickstart">Quickstart</a> &middot;
   <a href="#api-reference">API</a> &middot;
