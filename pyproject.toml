@@ -42,7 +42,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/clichain"]
+packages = ["src/clichain", "src/cmdchain"]
 
 [tool.ruff]
 target-version = "py310"
