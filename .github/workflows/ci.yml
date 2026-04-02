@@ -15,8 +15,19 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install ruff
-      - run: ruff check src/ tests/
-      - run: ruff format --check src/ tests/
+      - run: ruff check src/ tests/ examples/
+      - run: ruff format --check src/ tests/ examples/
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e .
+      - run: pip install basedpyright
+      - run: basedpyright src/
 
   test:
     runs-on: ${{ matrix.os }}
@@ -32,3 +43,19 @@ jobs:
       - run: pip install -e .
       - run: pip install pytest
       - run: python -m pytest tests/test_core.py -v
+
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e .
+      - run: |
+          for f in examples/01_*.py examples/02_*.py examples/03_*.py \
+                   examples/04_*.py examples/05_*.py examples/08_*.py \
+                   examples/09_*.py examples/11_*.py; do
+            echo "=== $f ==="
+            python "$f" || exit 1
+          done
