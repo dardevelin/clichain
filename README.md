@@ -64,11 +64,17 @@ clichain gives you the same pipe-based execution model with:
 
 ## Install
 
+The PyPI package name is **cmdchain**, the Python module is **clichain**.
+
 ```bash
 pip install cmdchain
 ```
 
-clichain has zero runtime dependencies. Python 3.10+ only.
+```python
+from clichain import tool
+```
+
+Zero runtime dependencies. Python 3.10+ only.
 
 For compiling scripts to standalone binaries:
 
