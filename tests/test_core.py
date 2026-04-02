@@ -425,7 +425,9 @@ def test_sbom_generator():
     sbom = result.sbom()
     assert "generator" in sbom
     assert sbom["generator"]["name"] == "clichain"
-    assert sbom["generator"]["version"] == "0.1.0"
+    from clichain.core import _version
+
+    assert sbom["generator"]["version"] == _version
     assert "python" in sbom["generator"]
 
 

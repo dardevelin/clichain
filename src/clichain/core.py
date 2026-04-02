@@ -157,9 +157,11 @@ class Result:
         sep = "=" * W
         div = "-" * W
         v, py = gen["version"], gen["python"]
+        commit = gen.get("commit", "")
+        ver = f"{v} ({commit})" if commit else v
         plat = f"{env['os']} {env['os_version']} {env['arch']}"
         _emit(sep)
-        _emit(f"  clichain {v}  |  python {py}  |  {plat}")
+        _emit(f"  clichain {ver}  |  python {py}  |  {plat}")
         _emit(f"  {env['hostname']}  {env['cwd']}")
         _emit(f"  {data['timestamp']}")
         _emit(f"  {status}  {data['elapsed']}s")
@@ -315,12 +317,16 @@ class Result:
 
         import platform
 
+        gen: dict = {
+            "name": "clichain",
+            "version": _version,
+            "python": sys.version.split()[0],
+        }
+        if _git_hash:
+            gen["commit"] = _git_hash
+
         sbom: dict = {
-            "generator": {
-                "name": "clichain",
-                "version": _version,
-                "python": sys.version.split()[0],
-            },
+            "generator": gen,
             "environment": {
                 "os": platform.system(),
                 "os_version": platform.release(),
@@ -484,7 +490,26 @@ def _explain_exit(code: int) -> str:
 
 
 _output: IO[str] | Callable[[str], None] | None = sys.stderr
-_version: str = "0.1.0"
+_version: str = "0.1.1"
+_git_hash: str = ""
+
+
+def _detect_git_hash() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return ""
+
+
+_git_hash = _detect_git_hash()
 
 
 def set_output(dest: IO[str] | Callable[[str], None] | None) -> None:
@@ -1029,12 +1054,16 @@ class Pipeline:
             }
             steps.append(node)
 
+        desc_gen: dict = {
+            "name": "clichain",
+            "version": _version,
+            "python": sys.version.split()[0],
+        }
+        if _git_hash:
+            desc_gen["commit"] = _git_hash
+
         result: dict = {
-            "generator": {
-                "name": "clichain",
-                "version": _version,
-                "python": sys.version.split()[0],
-            },
+            "generator": desc_gen,
             "environment": {
                 "os": platform.system(),
                 "arch": platform.machine(),
