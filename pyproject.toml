@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clichain"
+version = "0.1.0"
+description = "Fluent CLI tool chaining for Python"
+requires-python = ">=3.10"
+license = "MIT OR Apache-2.0"
+keywords = ["cli", "subprocess", "pipe", "chain"]
+authors = [
+    { name = "Darcy Luis Neves Bras da Silva", email = "stardevelin@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+
+[project.scripts]
+clichain = "clichain.cli:main"
+
+[project.optional-dependencies]
+compile = [
+    "pyinstaller>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9",
+    "basedpyright>=1.20",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clichain"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["clichain"]
+
+[tool.basedpyright]
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
+pythonPlatform = "All"
+include = ["src", "tests"]
+extraPaths = ["src"]
+reportMissingModuleSource = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
