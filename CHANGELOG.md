@@ -5,7 +5,9 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version is 0.x,
 a breaking change bumps the minor version and everything else bumps the patch version.
 
-## [0.2.0] - Unreleased
+## [Unreleased]
+
+## [0.2.0] - 2026-11-03
 
 A rewrite of the executor for safety and correctness. Every item below has a test.
 
@@ -116,7 +118,8 @@ First release: `tool()`, pipelines with `pipe`, `filter`, `each`, `peek`, `meter
 `capture`, `feed`, `from_file`, `redirect`; preflight checks; reports and SBOM; the
 `clichain` CLI (`explain`, `check`, `compile`).
 
-[0.2.0]: https://github.com/dardevelin/clichain/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/dardevelin/clichain/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/dardevelin/clichain/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/dardevelin/clichain/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/dardevelin/clichain/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dardevelin/clichain/releases/tag/v0.1.0
