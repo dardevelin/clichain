@@ -1,6 +1,6 @@
 """End-to-end test for clichain compile.
 
-Requires pyinstaller: pip install clichain[compile]
+Requires pyinstaller: pip install cmdchain[compile]
 Skipped if pyinstaller is not installed.
 """
 
@@ -11,7 +11,7 @@ import pytest
 
 pytestmark = pytest.mark.skipif(
     importlib.util.find_spec("PyInstaller") is None,
-    reason="pyinstaller not installed (pip install clichain[compile])",
+    reason="pyinstaller not installed (pip install cmdchain[compile])",
 )
 
 
@@ -76,10 +76,12 @@ set_output(None)
 echo = tool("echo")
 result = echo("hello").run(validate=False)
 
+manifest = result.manifest()
+assert manifest["generator"]["name"] == "clichain"
+assert len(manifest["tools"]) > 0
 sbom = result.sbom()
-assert "generator" in sbom
-assert sbom["generator"]["name"] == "clichain"
-assert len(sbom["tools"]) > 0
+assert sbom["bomFormat"] == "CycloneDX"
+assert len(sbom["components"]) > 0
 print("sbom:ok")
 
 if result.ok:

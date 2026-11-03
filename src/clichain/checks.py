@@ -1,4 +1,4 @@
-"""Preflight checks: binary, env, file_exists, and custom checks."""
+"""Preflight checks: binaries (with version constraints), environment variables, files."""
 
 from __future__ import annotations
 
@@ -6,14 +6,18 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
 OnFail = Literal["error", "warn", "pass"]
 
+DEFAULT_VERSION_ARGS: tuple[str, ...] = ("--version",)
+_PROBE_TIMEOUT = 5
 
-@dataclass
+
+@dataclass(frozen=True)
 class CheckResult:
     ok: bool
     name: str
@@ -28,9 +32,7 @@ class CheckResult:
 
     @property
     def should_report(self) -> bool:
-        if self.ok:
-            return True
-        return self.on_fail != "pass"
+        return self.ok or self.on_fail != "pass"
 
     def format(self) -> str:
         if self.ok:
@@ -41,54 +43,93 @@ class CheckResult:
         return f"  {label}: {self.name} — expected {self.expected}, found {self.found}"
 
 
-def _detect_version(binary: str) -> str | None:
-    path = shutil.which(binary)
-    if not path:
+# -- Version detection --------------------------------------------------------
+
+_VERSION = re.compile(r"\d+\.\d+(?:\.\d+)?")
+_probe_cache: dict[tuple[str, tuple[str, ...]], str | None] = {}
+_probe_lock = threading.Lock()
+
+
+def detect_version(
+    binary: str, args: tuple[str, ...] = DEFAULT_VERSION_ARGS, path: str | None = None
+) -> str | None:
+    """Run ``binary *args`` once per resolved path and return the first ``N.N[.N]`` it prints.
+
+    Only the given flags are passed (``--version`` by default): never positional words,
+    which tools without a version flag would treat as file operands. stdin is closed so
+    the probe can never consume the caller's input.
+    """
+    path = path or shutil.which(binary)
+    if path is None:
         return None
-    for flag in ["--version", "-version", "version", "-v"]:
-        try:
-            proc = subprocess.run(
-                [path, flag],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            text = proc.stdout + proc.stderr
-            match = re.search(r"(\d+\.\d+(?:\.\d+)?)", text)
-            if match:
-                return match.group(1)
-        except (subprocess.TimeoutExpired, OSError):
-            continue
-    return None
+    key = (path, args)
+    with _probe_lock:
+        if key in _probe_cache:
+            return _probe_cache[key]
+    try:
+        proc = subprocess.run(
+            [path, *args],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=_PROBE_TIMEOUT,
+        )
+        text = (proc.stdout + proc.stderr).decode(errors="replace")
+        match = _VERSION.search(text)
+        version = match[0] if match else None
+    except (subprocess.TimeoutExpired, OSError):
+        version = None
+    with _probe_lock:
+        _probe_cache[key] = version
+    return version
 
 
-def _version_satisfies(found: str, constraint: str) -> bool:
-    """Check simple version constraints like >=1.7, <3.0, >=6.0,<8.0."""
-    found_parts = [int(x) for x in found.split(".")]
+# -- Version constraints -------------------------------------------------------
 
-    for part in constraint.split(","):
-        part = part.strip()
-        if part.startswith(">="):
-            req = [int(x) for x in part[2:].split(".")]
-            if found_parts < req:
-                return False
-        elif part.startswith("<="):
-            req = [int(x) for x in part[2:].split(".")]
-            if found_parts > req:
-                return False
-        elif part.startswith(">"):
-            req = [int(x) for x in part[1:].split(".")]
-            if found_parts <= req:
-                return False
-        elif part.startswith("<"):
-            req = [int(x) for x in part[1:].split(".")]
-            if found_parts >= req:
-                return False
-        elif part.startswith("=="):
-            req = [int(x) for x in part[2:].split(".")]
-            if found_parts != req:
-                return False
-    return True
+Clause = tuple[str, tuple[int, ...]]
+_CLAUSE = re.compile(r"\s*(>=|<=|==|!=|~=|>|<)\s*(\d+(?:\.\d+)*)\s*")
+
+
+def parse_constraint(spec: str) -> tuple[Clause, ...]:
+    """Parse ``">=6.0,<8"`` into clauses; raise ValueError on anything unrecognised."""
+    clauses: list[Clause] = []
+    for part in spec.split(","):
+        match = _CLAUSE.fullmatch(part)
+        if not match:
+            raise ValueError(f"invalid version constraint {spec!r}: cannot parse {part!r}")
+        op, number = match[1], tuple(int(x) for x in match[2].split("."))
+        if op == "~=" and len(number) < 2:
+            raise ValueError(f"invalid version constraint {spec!r}: ~= needs at least X.Y")
+        clauses.append((op, number))
+    return tuple(clauses)
+
+
+def _pad(a: tuple[int, ...], b: tuple[int, ...]) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    width = max(len(a), len(b))
+    return a + (0,) * (width - len(a)), b + (0,) * (width - len(b))
+
+
+def _clause_ok(found: tuple[int, ...], op: str, req: tuple[int, ...]) -> bool:
+    if op == "~=":  # compatible release: >= req, and same prefix up to the last component
+        upper = (*req[:-2], req[-2] + 1)
+        return _clause_ok(found, ">=", req) and _clause_ok(found, "<", upper)
+    f, r = _pad(found, req)
+    return {
+        ">=": f >= r,
+        "<=": f <= r,
+        ">": f > r,
+        "<": f < r,
+        "==": f == r,
+        "!=": f != r,
+    }[op]
+
+
+def version_satisfies(found: str, constraint: str) -> bool:
+    """True when version ``found`` meets every clause of ``constraint``."""
+    version = tuple(int(x) for x in found.split("."))
+    return all(_clause_ok(version, op, req) for op, req in parse_constraint(constraint))
+
+
+# -- Checks ----------------------------------------------------------------------
 
 
 def binary_check(
@@ -96,6 +137,7 @@ def binary_check(
     version: str | None = None,
     on_fail: OnFail = "error",
     msg: str = "",
+    version_args: tuple[str, ...] = DEFAULT_VERSION_ARGS,
 ) -> Callable[[], CheckResult]:
     def _check() -> CheckResult:
         path = shutil.which(name)
@@ -108,35 +150,28 @@ def binary_check(
                 msg=msg or f"{name} not found on $PATH",
                 on_fail=on_fail,
             )
-
         if not version:
             return CheckResult(
-                ok=True,
-                name=name,
-                expected="on $PATH",
-                found=f"{path}",
-                msg=msg,
-                on_fail=on_fail,
+                ok=True, name=name, expected="on $PATH", found=path, msg=msg, on_fail=on_fail
             )
 
-        detected = _detect_version(name)
-        if not detected:
+        detected = detect_version(name, version_args, path=path)
+        if detected is None:  # fail closed: a constraint we cannot verify is not met
             return CheckResult(
-                ok=True,
+                ok=False,
                 name=name,
                 expected=version,
                 found=f"{path} (version unknown)",
-                msg=msg,
+                msg=msg or f"{name}: could not determine version to check {version}",
                 on_fail=on_fail,
             )
-
-        satisfied = _version_satisfies(detected, version)
+        satisfied = version_satisfies(detected, version)
         return CheckResult(
             ok=satisfied,
             name=name,
             expected=version,
             found=f"{detected} at {path}",
-            msg=msg or (f"{name} {detected} does not satisfy {version}" if not satisfied else ""),
+            msg=msg or ("" if satisfied else f"{name} {detected} does not satisfy {version}"),
             on_fail=on_fail,
         )
 
@@ -145,12 +180,12 @@ def binary_check(
 
 def env(name: str, on_fail: OnFail = "error", msg: str = "") -> Callable[[], CheckResult]:
     def _check() -> CheckResult:
-        value = os.environ.get(name)
+        present = name in os.environ
         return CheckResult(
-            ok=value is not None,
+            ok=present,
             name=f"env:{name}",
             expected="set",
-            found="set" if value is not None else "not set",
+            found="set" if present else "not set",
             msg=msg or f"environment variable {name} is not set",
             on_fail=on_fail,
         )
@@ -171,7 +206,3 @@ def file_exists(path: str, on_fail: OnFail = "error", msg: str = "") -> Callable
         )
 
     return _check
-
-
-def run_checks(checks: list[Callable[[], CheckResult]]) -> list[CheckResult]:
-    return [check() for check in checks]

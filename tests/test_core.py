@@ -364,80 +364,80 @@ def test_profile_lines():
     assert result.profile[-1].lines_out == 3
 
 
-# -- SBOM ---------------------------------------------------------------------
+# -- Manifest ----------------------------------------------------------------
 
 
-def test_sbom_contains_tools():
+def test_manifest_contains_tools():
     echo = tool("echo")
     grep = tool("grep")
     result = echo("hello").pipe(grep("hello")).run()
-    sbom = result.sbom()
-    assert "tools" in sbom
-    names = [t["name"] for t in sbom["tools"]]
+    data = result.manifest()
+    assert "tools" in data
+    names = [t["name"] for t in data["tools"]]
     assert "echo" in names
     assert "grep" in names
 
 
-def test_sbom_contains_paths():
+def test_manifest_contains_paths():
     echo = tool("echo")
     result = echo("hello").run()
-    sbom = result.sbom()
-    assert all("path" in t for t in sbom["tools"])
+    data = result.manifest()
+    assert all("path" in t for t in data["tools"])
 
 
-def test_sbom_contains_timestamp():
+def test_manifest_contains_timestamp():
     echo = tool("echo")
     result = echo("hello").run()
-    sbom = result.sbom()
-    assert "timestamp" in sbom
-    assert sbom["timestamp"] != ""
+    data = result.manifest()
+    assert "timestamp" in data
+    assert data["timestamp"] != ""
 
 
-def test_sbom_tracks_files_written(tmp_path):
+def test_manifest_tracks_files_written(tmp_path):
     echo = tool("echo")
     out_file = str(tmp_path / "out.txt")
     result = echo("hello").redirect(stdout=out_file).run()
-    sbom = result.sbom()
-    assert "files_written" in sbom
-    assert out_file in sbom["files_written"]
+    data = result.manifest()
+    assert "files_written" in data
+    assert out_file in data["files_written"]
 
 
-def test_sbom_no_files_written():
+def test_manifest_no_files_written():
     echo = tool("echo")
     result = echo("hello").run()
-    sbom = result.sbom()
-    assert "files_written" not in sbom
+    data = result.manifest()
+    assert "files_written" not in data
 
 
-def test_sbom_json():
+def test_manifest_json():
     echo = tool("echo")
     result = echo("hello").run()
-    j = result.sbom_json()
+    j = result.manifest_json()
     import json
 
     parsed = json.loads(j)
     assert "tools" in parsed
 
 
-def test_sbom_generator():
+def test_manifest_generator():
     echo = tool("echo")
     result = echo("hello").run()
-    sbom = result.sbom()
-    assert "generator" in sbom
-    assert sbom["generator"]["name"] == "clichain"
-    from clichain.core import _version
+    data = result.manifest()
+    assert "generator" in data
+    assert data["generator"]["name"] == "clichain"
+    from clichain import __version__ as _version
 
-    assert sbom["generator"]["version"] == _version
-    assert "python" in sbom["generator"]
+    assert data["generator"]["version"] == _version
+    assert "python" in data["generator"]
 
 
-def test_sbom_call_tree():
+def test_manifest_call_tree():
     echo = tool("echo")
     grep = tool("grep")
     result = echo("hello\nworld").filter(lambda line: "hello" in line).pipe(grep("hello")).run()
-    sbom = result.sbom()
-    assert "call_tree" in sbom
-    tree = sbom["call_tree"]
+    data = result.manifest()
+    assert "call_tree" in data
+    tree = data["call_tree"]
     assert len(tree) == 3
     assert tree[0]["type"] == "CmdStep"
     assert tree[0]["cmd"] == "echo 'hello\nworld'"
@@ -445,21 +445,21 @@ def test_sbom_call_tree():
     assert tree[2]["type"] == "CmdStep"
 
 
-def test_sbom_call_tree_capture():
+def test_manifest_call_tree_capture():
     echo = tool("echo")
     result = echo("world").capture("name").pipe(echo("hello {name}")).run()
-    sbom = result.sbom()
-    tree = sbom["call_tree"]
+    data = result.manifest()
+    tree = data["call_tree"]
     capture_steps = [s for s in tree if s["type"] == "CaptureStep"]
     assert len(capture_steps) == 1
     assert capture_steps[0]["name"] == "name"
 
 
-def test_sbom_deduplicates_tools():
+def test_manifest_deduplicates_tools():
     echo = tool("echo")
     result = echo("a").pipe(echo("b")).pipe(echo("c")).run()
-    sbom = result.sbom()
-    names = [t["name"] for t in sbom["tools"]]
+    data = result.manifest()
+    names = [t["name"] for t in data["tools"]]
     assert names.count("echo") == 1
 
 
@@ -497,14 +497,14 @@ def test_from_file_filter(tmp_path):
     assert result.lines == ["a.py", "c.py"]
 
 
-def test_from_file_sbom(tmp_path):
+def test_from_file_manifest(tmp_path):
     f = tmp_path / "data.txt"
     f.write_text("hello\n")
     cat = tool("cat")
     result = cat().from_file(str(f)).run()
-    sbom = result.sbom()
-    assert "files_read" in sbom
-    assert str(f) in sbom["files_read"]
+    data = result.manifest()
+    assert "files_read" in data
+    assert str(f) in data["files_read"]
 
 
 def test_from_file_redirect(tmp_path):
@@ -586,10 +586,11 @@ def test_meter_with_label():
     assert any("meter(test)" in p.name for p in result.profile)
 
 
-def test_meter_no_bytes_without_meter():
+def test_bytes_measured_without_meter():
     echo = tool("echo")
     result = echo("hello").run()
-    assert all(p.bytes_in is None for p in result.profile)
+    assert result.profile[0].bytes_in == 0
+    assert result.profile[0].bytes_out == len(b"hello\n")
 
 
 def test_report(capsys):

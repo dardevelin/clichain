@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cmdchain"
-version = "0.1.2"
+version = "0.2.0"
 description = "Fluent CLI tool chaining for Python"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
 keywords = ["cli", "subprocess", "pipe", "chain"]
 authors = [
@@ -16,13 +16,14 @@ authors = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Programming Language :: Python :: Free Threading :: 3 - Stable",
     "Typing :: Typed",
 ]
 
@@ -37,6 +38,8 @@ compile = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-timeout>=2.3",
+    "coverage>=7.6",
     "ruff>=0.9",
     "basedpyright>=1.20",
 ]
@@ -45,7 +48,7 @@ dev = [
 packages = ["src/clichain", "src/cmdchain"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
@@ -64,7 +67,7 @@ select = [
 known-first-party = ["clichain"]
 
 [tool.basedpyright]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 typeCheckingMode = "standard"
 pythonPlatform = "All"
 include = ["src", "tests"]
@@ -73,3 +76,14 @@ reportMissingModuleSource = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+timeout = 60
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["clichain"]
+branch = true
+patch = ["subprocess"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

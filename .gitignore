@@ -21,3 +21,5 @@ venv/
 .vscode/
 *.swp
 *.swo
+.coverage
+.coverage.*

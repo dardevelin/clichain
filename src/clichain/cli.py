@@ -1,91 +1,62 @@
-"""clichain CLI — compile, explain, check."""
+"""clichain CLI — explain, check, compile."""
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import sys
 
 
 def cmd_explain(args: argparse.Namespace) -> int:
-    from clichain.core import _ERROR_DETAIL, _EXIT_CODES, _SIGNALS
+    from clichain.errors import explain_code_lines, parse_code
 
-    code = args.code.upper()
-
-    if code.startswith("S"):
-        sig = int(code[1:])
-        if sig in _SIGNALS:
-            name, desc = _SIGNALS[sig]
-            print(f"error[{code}]: signal {sig} ({name})")
-            print(f"  {desc}")
-        else:
-            print(f"error[{code}]: signal {sig}")
-            print("  unknown signal")
-    elif code.startswith("X"):
-        exit_code = int(code[1:])
-        if exit_code in _EXIT_CODES:
-            print(f"error[{code}]: exit {exit_code}")
-            print(f"  {_EXIT_CODES[exit_code]}")
-        else:
-            print(f"error[{code}]: exit {exit_code}")
-            print("  unknown exit code")
-    else:
-        print(f"unknown error code: {code}")
+    parsed = parse_code(args.code)
+    if parsed is None:
+        print(f"unknown error code: {args.code!r} (expected S<signal> or X<exit>, e.g. S13, X127)")
         return 1
-
-    detail = _ERROR_DETAIL.get(code)
-    if detail:
-        print()
-        print(f"  {detail}")
-
+    print("\n".join(explain_code_lines(*parsed)))
     return 0
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    import importlib.util
+    """Import the script without executing any pipeline, then check every tool it uses.
 
-    from clichain.core import Pipeline, set_output
+    Exits 1 when any check with on_fail="error" fails, so CI can gate on it.
+    """
+    from clichain.pipeline import Pipeline, dry_run
+    from clichain.render import set_output
 
     set_output(sys.stderr)
-
     spec = importlib.util.spec_from_file_location("__clichain_script__", args.script)
-    if not spec or not spec.loader:
+    if spec is None or spec.loader is None:
         print(f"error: cannot load {args.script}", file=sys.stderr)
         return 1
-
-    # Import the script — this will create tool() instances
-    # but won't run pipelines unless they call .run() at module level
     module = importlib.util.module_from_spec(spec)
+    with dry_run() as executed:
+        try:
+            spec.loader.exec_module(module)
+        except SystemExit:
+            pass
+        except Exception as exc:  # the script is still worth checking up to this point
+            print(f"warning: script raised {type(exc).__name__}: {exc}", file=sys.stderr)
 
-    # Collect all Cmd and Pipeline objects after import
-    import contextlib
-
-    with contextlib.suppress(SystemExit):
-        spec.loader.exec_module(module)
-
-    # Find all Pipeline/Cmd objects in the module and check them
-    from clichain.core import Cmd
-
-    checked = False
-    for name in dir(module):
-        obj = getattr(module, name)
+    found: dict[int, tuple[str, Pipeline]] = {}
+    for name, obj in vars(module).items():
         if isinstance(obj, Pipeline):
-            print(f"pipeline: {name}", file=sys.stderr)
-            obj.check()
-            checked = True
-        elif isinstance(obj, Cmd):
-            print(f"tool: {name} ({obj._binary})", file=sys.stderr)
-            obj.check()
-            checked = True
+            found.setdefault(id(obj), (name, obj))
+    for pipeline in executed:
+        found.setdefault(id(pipeline), (f"run at {pipeline!r}", pipeline))
 
-    if not checked:
+    if not found:
         print("no pipelines or tools found in script", file=sys.stderr)
-
-    return 0
+    failed = False
+    for name, pipeline in found.values():
+        print(f"{name}: {pipeline!r}", file=sys.stderr)
+        failed |= any(r.should_stop for r in pipeline.check())
+    return 1 if failed else 0
 
 
 def cmd_compile(args: argparse.Namespace) -> int:
-    import importlib.util
-
     if importlib.util.find_spec("PyInstaller") is None:
         print(
             "error: pyinstaller not installed\n  install with: pip install cmdchain[compile]",
@@ -95,57 +66,37 @@ def cmd_compile(args: argparse.Namespace) -> int:
 
     from PyInstaller import __main__ as pyinstaller_main  # type: ignore[import-not-found]
 
-    script = args.script
-    output = args.output or script.rsplit(".", 1)[0]
-
-    pyinstaller_args = [
-        script,
-        "--onefile",
-        "--name",
-        output,
-        "--noconfirm",
-    ]
-
+    output = args.output or args.script.rsplit(".", 1)[0]
+    pyinstaller_args = [args.script, "--onefile", "--name", output, "--noconfirm"]
     if args.clean:
         pyinstaller_args.append("--clean")
-
-    print(f"compiling {script} -> {output}")
+    print(f"compiling {args.script} -> {output}")
     pyinstaller_main.run(pyinstaller_args)
-
     return 0
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="clichain",
-        description="CLI tool chaining for Python",
-    )
+    parser = argparse.ArgumentParser(prog="clichain", description="CLI tool chaining for Python")
     sub = parser.add_subparsers(dest="command")
 
-    # explain
     p_explain = sub.add_parser("explain", help="explain an error code")
     p_explain.add_argument("code", help="error code (e.g. S13, X127)")
 
-    # check
-    p_check = sub.add_parser("check", help="preflight a script")
+    p_check = sub.add_parser("check", help="preflight a script (exit 1 if a check fails)")
     p_check.add_argument("script", help="path to .py script")
 
-    # compile
     p_compile = sub.add_parser("compile", help="compile script to binary")
     p_compile.add_argument("script", help="path to .py script")
     p_compile.add_argument("-o", "--output", help="output binary name")
     p_compile.add_argument("--clean", action="store_true", help="clean build artifacts")
 
     args = parser.parse_args()
-
     if args.command is None:
         parser.print_help()
         sys.exit(0)
-
-    handlers = {
-        "explain": cmd_explain,
-        "check": cmd_check,
-        "compile": cmd_compile,
-    }
-
+    handlers = {"explain": cmd_explain, "check": cmd_check, "compile": cmd_compile}
     sys.exit(handlers[args.command](args))
+
+
+if __name__ == "__main__":
+    main()
