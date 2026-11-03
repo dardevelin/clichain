@@ -13,7 +13,7 @@ VIDEO_EXTS = (".mkv", ".mp4", ".avi", ".webm")
 
 pwd = tool("pwd")
 ls = tool("ls")
-ffmpeg = tool("ffmpeg", version=">=6.0", msg="brew install ffmpeg")
+ffmpeg = tool("ffmpeg", version=">=6.0", msg="brew install ffmpeg", version_args=("-version",))
 
 pipeline = (
     pwd()

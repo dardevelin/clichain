@@ -67,16 +67,16 @@ result = (
 )
 
 
-# --- Example 2: Send SBOM after execution -----------------------------------
+# --- Example 2: Send the run manifest after execution -----------------------------------
 
-sbom = result.sbom()
+manifest = result.manifest(redact=True)
 post_json(
     WEBHOOK_URL,
     {
         "event": "pipeline_complete",
         "ok": result.ok,
         "elapsed": result.elapsed,
-        "tools": sbom["tools"],
+        "tools": manifest["tools"],
         "exit_code": result.returncode,
     },
 )

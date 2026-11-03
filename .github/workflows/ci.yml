@@ -5,57 +5,91 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call: # publish.yml runs this before uploading
+
+permissions:
+  contents: read
+
+# Actions are pinned by commit SHA (tag in the comment); Dependabot keeps them current.
+# Tools come from the `dev` dependency group via uv.lock, so a new ruff or basedpyright
+# release cannot break main without a code change.
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.13"
-      - run: pip install ruff
-      - run: ruff check src/ tests/ examples/
-      - run: ruff format --check src/ tests/ examples/
+          python-version: "3.15"
+      - run: uv sync --locked
+      - run: uv run ruff check src/ tests/ examples/
+      - run: uv run ruff format --check src/ tests/ examples/
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.13"
-      - run: pip install -e .
-      - run: pip install basedpyright
-      - run: basedpyright src/
+          python-version: "3.15"
+      - run: uv sync --locked
+      - run: uv run basedpyright src/ tests/
 
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        # 3.15t is the free-threaded build: the concurrency tests run without a GIL.
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15", "3.15t"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e .
-      - run: pip install pytest
-      - run: python -m pytest tests/test_core.py -v
+      - run: uv sync --locked
+      # pytest settings (pyproject.toml) turn every warning into an error, ResourceWarning
+      # included, and give each test a 60 s timeout so a regression cannot hang the job.
+      - run: uv run coverage run -m pytest -v
+      - run: uv run coverage report
+
+  prerelease:
+    # The next Python, so breakage shows up before its release. Allowed to fail.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.16"
+      - run: uv sync --locked
+      - run: uv run pytest -v
+
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.15"
+      - run: uv sync --locked --extra compile
+      - run: uv run pytest -v tests/test_compile.py
 
   examples:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.13"
-      - run: pip install -e .
+          python-version: "3.15"
+      - run: uv sync --locked
+      # 12_webhook_metrics.py is skipped: it posts to a remote HTTP endpoint.
+      # 06 and 07 only describe their pipelines, so they run without pv or ffmpeg.
       - run: |
-          for f in examples/01_*.py examples/02_*.py examples/03_*.py \
-                   examples/04_*.py examples/05_*.py examples/08_*.py \
-                   examples/09_*.py examples/11_*.py; do
+          for f in examples/*.py; do
+            case "$f" in *12_webhook_metrics.py) continue ;; esac
             echo "=== $f ==="
-            python "$f" || exit 1
+            (cd "$RUNNER_TEMP" && uv run --project "$GITHUB_WORKSPACE" python -W error "$GITHUB_WORKSPACE/$f") || exit 1
           done

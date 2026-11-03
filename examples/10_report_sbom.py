@@ -1,4 +1,4 @@
-"""Execution reports, SBOM, and error diagnostics."""
+"""Execution reports, run manifest, CycloneDX SBOM, and error diagnostics."""
 
 import sys
 
@@ -23,7 +23,11 @@ result = (
 print("--- report ---")
 result.report()
 
-# --- SBOM ---
+# --- Run manifest (redacted: safe to share) ---
+print("\n--- manifest ---")
+print(result.manifest_json(indent=2, redact=True))
+
+# --- CycloneDX SBOM ---
 print("\n--- sbom ---")
 print(result.sbom_json(indent=2))
 
