@@ -18,13 +18,14 @@ uv run ruff check src/ tests/ examples/
 uv run ruff format --check src/ tests/ examples/
 uv run basedpyright src/ tests/
 uv run pytest                                   # all tests
+GITHUB_ACTIONS=true CI=true TERM=dumb CLICHAIN_DESCRIBE=json uv run pytest   # must pass too: CI's env
 uv run pytest tests/test_core.py::test_feed     # single test
 uv run coverage run -m pytest && uv run coverage report   # also measures subprocesses
 uv run -p 3.15t pytest                          # free-threaded interpreter
 uv sync --extra compile && uv run pytest tests/test_compile.py   # pyinstaller; skipped without it
 ```
 
-pytest config makes **every warning an error** (so a leaked fd's `ResourceWarning` fails the test) and gives each test a 60 s timeout. `tests/conftest.py` fails any test whose worker threads raised unhandled exceptions, and provides `run_snippet()` for anything that could hang or involves signals: it runs code in a fresh interpreter in its own session and kills the whole session on timeout. CI runs 3.11–3.15 and 3.15t on Ubuntu and macOS, plus an allowed-to-fail 3.16 job; tests shell out to coreutils, so code must work with both GNU and BSD tools.
+Tests are hermetic: `tests/conftest.py` pins every environment variable the library reads (`HERMETIC_ENV`), and `tests/test_environment.py` fails if the library starts reading one that is not pinned. A local pass that differs from CI usually means a new environment dependency. pytest config makes **every warning an error** (so a leaked fd's `ResourceWarning` fails the test) and gives each test a 60 s timeout. `tests/conftest.py` fails any test whose worker threads raised unhandled exceptions, and provides `run_snippet()` for anything that could hang or involves signals: it runs code in a fresh interpreter in its own session and kills the whole session on timeout. CI runs 3.11–3.15 and 3.15t on Ubuntu and macOS, plus an allowed-to-fail 3.16 job; tests shell out to coreutils, so code must work with both GNU and BSD tools.
 
 ## Architecture
 

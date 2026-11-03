@@ -114,8 +114,7 @@ def test_lines_flush_an_unterminated_last_line_and_strip_escapes():
 # -- grouped ---------------------------------------------------------------------------
 
 
-def test_grouped_prints_each_job_together_when_it_finishes(monkeypatch):
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+def test_grouped_prints_each_job_together_when_it_finishes():
     out = io.StringIO()
     console = console_for(Live("grouped", stream=out))
     first, second = console.job("first"), console.job("second")

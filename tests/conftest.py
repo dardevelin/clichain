@@ -73,6 +73,27 @@ def open_fds() -> set[int]:
     return fds
 
 
+# Every environment variable clichain itself reads, pinned for every test (None: unset).
+# Without this the suite depends on where it runs: GitHub Actions sets GITHUB_ACTIONS,
+# which switches grouped live output to ::group:: sections. A test that needs another
+# value sets it with monkeypatch. test_environment.py fails if the library starts
+# reading a variable that is not listed here.
+HERMETIC_ENV: dict[str, str | None] = {
+    "GITHUB_ACTIONS": None,
+    "CLICHAIN_DESCRIBE": None,
+    "TERM": "xterm-256color",
+}
+
+
+@pytest.fixture(autouse=True)
+def _hermetic_environment(monkeypatch):
+    for name, value in HERMETIC_ENV.items():
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+
+
 def captured_output(fn) -> list[str]:
     """Lines clichain emits while ``fn`` runs (the autouse fixture resets the output)."""
     lines: list[str] = []
